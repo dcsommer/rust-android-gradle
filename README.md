@@ -80,6 +80,9 @@ tasks.whenTaskAdded { task ->
 }
 ```
 
+There are also `cargoTest${buildType}` tasks available for running `cargo test`
+via Gradle, which can be run as part of your project's test execution.
+
 ## Configuration
 
 The `cargo` Gradle configuration accepts many options.
@@ -325,6 +328,17 @@ to append a list of additional arguments to each `cargo build` invocation.
 ```groovy
 cargo {
     extraCargoBuildArguments = ['a', 'list', 'of', 'strings']
+}
+```
+
+### extraCargoTestArguments
+
+Sometimes, you need to do things that the plugin doesn't anticipate.  Use `extraCargoTestArguments`
+to append a list of additional arguments to each `cargo test` invocation.
+
+```groovy
+cargo {
+    extraCargoTestArguments = ['a', 'list', 'of', 'strings']
 }
 ```
 

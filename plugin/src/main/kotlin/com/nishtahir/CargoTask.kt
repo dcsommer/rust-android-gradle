@@ -169,6 +169,16 @@ fun runCargo(command: String, extraFlags: List<String>, project: Project, toolch
                 }
                 environment("CARGO_TARGET_${toolchain_target}_LINKER", linker_wrapper.path)
 
+                val runner = if (System.getProperty("os.name").startsWith("Windows")) {
+                    // TODO: this file does not exist yet. We don't support running executables
+                    // (e.g. tests) on Windows yet.
+                    File(project.rootProject.buildDir, "runner/run-on-android.bat")
+                } else {
+                    File(project.rootProject.buildDir, "runner/run-on-android.sh")
+                }
+                val targetForEnv = toolchain.target.toUpperCase().replace("-", "_")
+                environment("CARGO_TARGET_${targetForEnv}_RUNNER", runner.path)
+
                 val cc = File(toolchainDirectory, "${toolchain.cc(apiLevel)}").path;
                 val cxx = File(toolchainDirectory, "${toolchain.cxx(apiLevel)}").path;
                 val ar = File(toolchainDirectory, "${toolchain.ar(apiLevel)}").path;

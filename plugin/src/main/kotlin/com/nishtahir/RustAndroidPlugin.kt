@@ -260,11 +260,34 @@ open class RustAndroidPlugin : Plugin<Project> {
             includeEmptyDirs = false
         }
 
+        // Fish runner scripts from our Java resources
+        val generateRunner = rootProject.tasks.maybeCreate("generateCargoRunner", GenerateLinkerWrapperTask::class.java).apply {
+            group = RUST_TASK_GROUP
+            description = "Generate runner script to run executables"
+        }
+
+        generateRunner.apply {
+            // From https://stackoverflow.com/a/320595.
+            from(rootProject.zipTree(File(RustAndroidPlugin::class.java.protectionDomain.codeSource.location.toURI()).path))
+            include("**/run-on-android*")
+            into(File(rootProject.buildDir, "runner"))
+            eachFile {
+                it.path = it.path.replaceFirst("com/nishtahir", "")
+            }
+            fileMode = 493 // 0755 in decimal; Kotlin doesn't have octal literals (!).
+            includeEmptyDirs = false
+        }
+
         cargoExtension.buildTypeToProfile.forEach { buildType, theProfile ->
             val buildTask = tasks.maybeCreate("cargoBuild${buildType.capitalize()}",
                     DefaultTask::class.java).apply {
                 group = RUST_TASK_GROUP
                 description = "Build library (all targets) for android build type ${buildType}"
+            }
+            val testTask = tasks.maybeCreate("cargoTest${buildType.capitalize()}",
+                    DefaultTask::class.java).apply {
+                group = RUST_TASK_GROUP
+                description = "Test library (all targets) for android build type ${buildType}"
             }
 
             cargoExtension.targets!!.forEach { target ->
@@ -289,11 +312,23 @@ open class RustAndroidPlugin : Plugin<Project> {
                     profile = theProfile
                 }
 
-                if (!usePrebuilt) {
-                    targetBuildTask.dependsOn(generateToolchain!!)
+                val targetTestTask = tasks.maybeCreate("cargoTest${target.capitalize()}${buildType.capitalize()}",
+                        CargoTestTask::class.java).apply {
+                    group = RUST_TASK_GROUP
+                    description = "Test library ($target) for android build type ${buildType}"
+                    toolchain = theToolchain
+                    profile = theProfile
+                }
+
+                if (generateToolchain != null) {
+                    targetBuildTask.dependsOn(generateToolchain)
+                    targetTestTask.dependsOn(generateToolchain)
                 }
                 targetBuildTask.dependsOn(generateLinkerWrapper)
+                targetTestTask.dependsOn(generateLinkerWrapper)
+                targetTestTask.dependsOn(generateRunner)
                 buildTask.dependsOn(targetBuildTask)
+                testTask.dependsOn(targetTestTask)
             }
         }
     }
