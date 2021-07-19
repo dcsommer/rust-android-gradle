@@ -2,7 +2,6 @@ package com.nishtahir
 
 import org.gradle.api.Action
 import org.gradle.api.GradleException
-import org.gradle.api.Project
 import org.gradle.process.ExecSpec
 import java.io.File
 import java.util.*
@@ -137,5 +136,33 @@ open class CargoExtension {
             return global
         }
         return null
+    }
+
+    fun getOutputDirectory(toolchain: Toolchain, profile: String, defaultTargetTriple: String?): String {
+        // CARGO_TARGET_DIR can be used to force the use of a global, shared target directory
+        // across all rust projects on a machine. Use it if it's set, otherwise use the
+        // configured `targetDirectory` value, and fall back to `${module}/target`.
+        //
+        // We also allow this to be specified in `local.properties`, not because this is
+        // something you should ever need to do currently, but we don't want it to ruin anyone's
+        // day if it turns out we're wrong about that.
+        val targetDirectory =
+            getProperty("rust.cargoTargetDir", "CARGO_TARGET_DIR")
+        ?: targetDirectory
+        ?: "${module!!}/target"
+
+        // See https://rust-lang.github.io/rfcs/2678-named-custom-cargo-profiles.html#new-dir-name-attribute
+        // Right now "dev" maps to "debug", but depending on how RFC 2678 gets merged in the end, we may need to read a  property out of `cargo metadata`
+        var profileDirName = if (profile == "dev") {
+            "debug"
+        } else {
+            profile
+        }
+
+        return if (toolchain.target == defaultTargetTriple) {
+            "${targetDirectory}/${profileDirName}"
+        } else {
+            "${targetDirectory}/${toolchain.target}/${profileDirName}"
+        }
     }
 }
