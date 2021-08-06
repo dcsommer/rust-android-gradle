@@ -278,19 +278,27 @@ open class RustAndroidPlugin : Plugin<Project> {
             includeEmptyDirs = false
         }
 
+
         cargoExtension.buildTypeToProfile.forEach { buildType, theProfile ->
-            val buildTask = tasks.maybeCreate("cargoBuild${buildType.capitalize()}",
+            val buildTypeCapitalized = buildType.capitalize()
+            val buildTask = tasks.maybeCreate("cargoBuild${buildTypeCapitalized}",
                     DefaultTask::class.java).apply {
                 group = RUST_TASK_GROUP
                 description = "Build library (all targets) for android build type ${buildType}"
             }
-            val testTask = tasks.maybeCreate("cargoTest${buildType.capitalize()}",
+            val testTask = tasks.maybeCreate("cargoTest${buildTypeCapitalized}",
                     DefaultTask::class.java).apply {
                 group = RUST_TASK_GROUP
                 description = "Test library (all targets) for android build type ${buildType}"
             }
+            val clippyTask = tasks.maybeCreate("cargoClippy${buildTypeCapitalized}",
+                    DefaultTask::class.java).apply {
+                group = RUST_TASK_GROUP
+                description = "Run `cargo clippy` for android build type ${buildType}"
+            }
 
             cargoExtension.targets!!.forEach { target ->
+                val targetCapitalized = target.capitalize()
                 val theToolchain = toolchains
                         .filter {
                             if (usePrebuilt) {
@@ -304,7 +312,7 @@ open class RustAndroidPlugin : Plugin<Project> {
                     throw GradleException("Target ${target} is not recognized (recognized targets: ${toolchains.map { it.platform }.sorted()}). Check `local.properties` and `build.gradle`.")
                 }
 
-                val targetBuildTask = tasks.maybeCreate("cargoBuild${target.capitalize()}${buildType.capitalize()}",
+                val targetBuildTask = tasks.maybeCreate("cargoBuild${targetCapitalized}${buildTypeCapitalized}",
                         CargoBuildTask::class.java).apply {
                     group = RUST_TASK_GROUP
                     description = "Build library ($target) for android build type ${buildType}"
@@ -312,7 +320,7 @@ open class RustAndroidPlugin : Plugin<Project> {
                     profile = theProfile
                 }
 
-                val targetTestTask = tasks.maybeCreate("cargoTest${target.capitalize()}${buildType.capitalize()}",
+                val targetTestTask = tasks.maybeCreate("cargoTest${targetCapitalized}${buildTypeCapitalized}",
                         CargoTestTask::class.java).apply {
                     group = RUST_TASK_GROUP
                     description = "Test library ($target) for android build type ${buildType}"
@@ -320,15 +328,33 @@ open class RustAndroidPlugin : Plugin<Project> {
                     profile = theProfile
                 }
 
+                val targetClippyTask = tasks.maybeCreate("cargoClippy${targetCapitalized}${buildTypeCapitalized}",
+                        CargoClippyTask::class.java).apply {
+                    group = RUST_TASK_GROUP
+                    description = "Run `cargo clippy` on ($target) for android build type ${buildType}"
+                    toolchain = theToolchain
+                    profile = theProfile
+                }
+
+                // Tasks that build Rust code
                 if (generateToolchain != null) {
                     targetBuildTask.dependsOn(generateToolchain)
                     targetTestTask.dependsOn(generateToolchain)
+                    targetClippyTask.dependsOn(generateToolchain)
                 }
+
+                // Tasks that link Rust code
                 targetBuildTask.dependsOn(generateLinkerWrapper)
                 targetTestTask.dependsOn(generateLinkerWrapper)
+                targetClippyTask.dependsOn(generateLinkerWrapper)
+
+                // Tasks that run Rust code
                 targetTestTask.dependsOn(generateRunner)
+
+                // Set up umbrella task deps
                 buildTask.dependsOn(targetBuildTask)
                 testTask.dependsOn(targetTestTask)
+                clippyTask.dependsOn(targetClippyTask)
             }
         }
     }

@@ -25,7 +25,7 @@ buildscript {
 }
 ```
 
-or 
+or
 
 ```groovy
 buildscript {
@@ -339,6 +339,17 @@ to append a list of additional arguments to each `cargo test` invocation.
 ```groovy
 cargo {
     extraCargoTestArguments = ['a', 'list', 'of', 'strings']
+}
+```
+
+### extraCargoTestArguments
+
+Sometimes, you need to do things that the plugin doesn't anticipate.  Use `extraCargoClippyArguments`
+to append a list of additional arguments to each `cargo clippy` invocation.
+
+```groovy
+cargo {
+    extraCargoClippyArguments = ['--all']
 }
 ```
 

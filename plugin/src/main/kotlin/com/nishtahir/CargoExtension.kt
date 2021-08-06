@@ -44,6 +44,7 @@ open class CargoExtension {
     var apiLevels: Map<String, Int> = mapOf()
     var extraCargoBuildArguments: List<String>? = null
     var extraCargoTestArguments: List<String>? = null
+    var extraCargoClippyArguments: List<String>? = null
 
     // It would be nice to use a receiver here, but there are problems interoperating with Groovy
     // and Kotlin that are just not worth working out.  Another JVM language, yet another dynamic
